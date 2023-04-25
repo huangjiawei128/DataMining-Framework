@@ -1,0 +1,4 @@
+**/output/*
+**/evaluation/*
+**/__pycache__/
+.idea
