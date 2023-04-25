@@ -47,9 +47,9 @@ except Exception as e:
 predict_y = regressor.predict(test_X)
 
 #   结果输出
-predict_y_df = pd.DataFrame({'LOS': predict_y})
+predict_y_df = pd.DataFrame({label: predict_y})
 predict_y_dst_path = predict_y_dst_dir + '/predict_y_%s.csv' % regressor_file_name
-predict_y_df.to_csv(predict_y_dst_path, header=['LOS'], index=False)
+predict_y_df.to_csv(predict_y_dst_path, header=[label], index=False)
 
 #   评价结果输出
 evaluation_result = cal_metric(test_y, predict_y)
