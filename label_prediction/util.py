@@ -3,7 +3,7 @@ from sklearn import metrics
 
 test_set_src_path = "./data_preprocessing/output/test.csv"
 test_X_src_path = "./feature_selection/output/test_X.csv"
-regressor_src_dir = "./model_building/output"
+classifier_src_dir = "./model_building/output"
 
 predict_y_dst_dir = "./label_prediction/output"
 evaluation_result_dst_dir = "./label_prediction/evaluation"
@@ -24,18 +24,22 @@ xgboost_params = {
     'reg_lambda': 1
 }
 
-regressor_params_map = {
+classifier_params_map = {
     'random_forest': random_forest_params,
     'k_neighbors': k_neighbors_params,
     'xgboost': xgboost_params
 }
 
 
-def cal_metric(test_y, predict_y):
+def cal_metric(test_y, predict_y, pro_predict_y=None):
     ret = dict()
-    ret['R2'] = metrics.r2_score(y_true=test_y, y_pred=predict_y)
-    ret['MSE'] = metrics.mean_squared_error(y_true=test_y, y_pred=predict_y)
-    ret['RMSE'] = np.sqrt(ret['MSE'])
-    ret['MAE'] = metrics.mean_absolute_error(y_true=test_y, y_pred=predict_y)
-    ret['MAPE'] = metrics.mean_absolute_percentage_error(y_true=test_y, y_pred=predict_y)
+    cm = metrics.confusion_matrix(y_true=test_y, y_pred=predict_y)
+    TN, FP, FN, TP = cm[0, 0], cm[0, 1], cm[1, 0], cm[1, 1]
+    ret['confusion_matrix'] = [[int(TN), int(FP)], [int(FN), int(TP)]]
+    if pro_predict_y is not None:
+        FPR, TPR, thresholds = metrics.roc_curve(test_y, pro_predict_y[:, 1], pos_label=1)
+        ret['auc'] = metrics.auc(FPR, TPR)
+    ret['sensitivity'] = TP / (TP + FN)
+    ret['specification'] = TN / (FP + TN)
+    ret['g-mean'] = np.sqrt(ret['sensitivity'] * ret['specification'])
     return ret

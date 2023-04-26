@@ -16,4 +16,4 @@ num_features = [
     'sbp', 'dbp'
 ]
 ori_features = cate_features + list_features + num_features
-label = 'LOS'
+label = 'hospital_expire_flag'

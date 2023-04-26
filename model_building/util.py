@@ -1,12 +1,11 @@
-from regressor import *
-from sklearn import metrics
+from classifier import *
 
-train_set_src_path = "./data_preprocessing/output/train.csv"
-train_X_src_path = "./feature_selection/output/train_X.csv"
+train_X_src_path = "./sample_balance/output/train_X.csv"
+train_y_src_path = "./sample_balance/output/train_y.csv"
 
-regressor_dst_dir = "./model_building/output"
+classifier_dst_dir = "./model_building/output"
 
-regressor_map = {
+classifier_map = {
     'random_forest': random_forest,
     'k_neighbors': k_neighbors,
     'xgboost': xgboost
@@ -28,7 +27,7 @@ xgboost_params = {
     'reg_lambda': 0.1
 }
 
-regressor_params_map = {
+classifier_params_map = {
     'random_forest': random_forest_params,
     'k_neighbors': k_neighbors_params,
     'xgboost': xgboost_params
