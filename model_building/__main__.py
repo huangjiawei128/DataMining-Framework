@@ -30,16 +30,19 @@ classifier_name = args.classifier
 train_X, train_y = pd.read_csv(train_X_src_path), pd.read_csv(train_y_src_path)
 train_X, train_y = train_X.to_numpy(), train_y.to_numpy()
 
-#   分类器训练
-classifier_params = classifier_params_map[classifier_name]
-classifier = classifier_map[classifier_name](train_X, train_y, classifier_params)
+classifier_func, classifier_params_lst = classifier_map[classifier_name]
+for classifier_params in classifier_params_lst:
+    # 分类器训练
+    print("---------- classifier training starts ----------")
+    print(classifier_params)
+    classifier = classifier_func(train_X, train_y, classifier_params)
+    print("---------- classifier training ends ----------\n")
 
-#   分类器输出
-classifier_file = classifier_name
-classifier_params = sorted(classifier_params.items(), key=lambda x: x[0], reverse=False)
-for param, value in classifier_params:
-    classifier_file += '_%s_%s' % (param, str(value))
-classifier_file = '%s/%s.h5' % (classifier_dst_dir, classifier_file)
-print(classifier_file)
-with open(classifier_file, 'wb') as rf:
-    pickle.dump(classifier, rf, protocol=pickle.HIGHEST_PROTOCOL)
+    #   分类器输出
+    classifier_file = classifier_name
+    classifier_params = sorted(classifier_params.items(), key=lambda x: x[0], reverse=False)
+    for param, value in classifier_params:
+        classifier_file += '_%s_%s' % (param, str(value))
+    classifier_file = '%s/%s.h5' % (classifier_dst_dir, classifier_file)
+    with open(classifier_file, 'wb') as rf:
+        pickle.dump(classifier, rf, protocol=pickle.HIGHEST_PROTOCOL)

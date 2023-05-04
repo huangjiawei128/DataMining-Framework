@@ -5,4 +5,4 @@ train_X_dst_path = "./feature_selection/output/train_X.csv"
 test_X_dst_path = "./feature_selection/output/test_X.csv"
 
 PCA_n_components = 0.95
-spearman_threshold = 0.08
+spearman_threshold = 0.10
