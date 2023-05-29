@@ -51,8 +51,7 @@ def filter_unaligned_moments(df):
 
 
 #   数据读取
-train_X, test_X = pd.read_csv(train_X_src_path, dtype={id: str}), \
-    pd.read_csv(test_X_src_path, dtype={id: str})
+train_X, test_X = pd.read_csv(train_X_src_path, dtype={id: str}), pd.read_csv(test_X_src_path, dtype={id: str})
 print(len(train_X[id].unique()))
 print(len(test_X[id].unique()))
 
@@ -85,8 +84,6 @@ train_X_rolled = roll_time_series(train_X, column_id=id, column_sort=time,
                                   min_timeshift=1, max_timeshift=window_size-1)
 test_X_rolled = roll_time_series(test_X, column_id=id, column_sort=time,
                                  min_timeshift=1, max_timeshift=window_size-1)
-print(train_X_rolled.info())
-print(test_X_rolled.info())
 test_X = extract_features(test_X_rolled, column_id=id, column_sort=time,
                           kind_to_fc_parameters=kind_to_fc_parameters, impute_function=impute)
 train_X = extract_features(train_X_rolled, column_id=id, column_sort=time,
@@ -101,22 +98,6 @@ print(train_X.columns)
 print(test_X.columns)
 print(len(train_X.columns.values.tolist()))
 print(len(test_X.columns.values.tolist()))
-
-# train_X = extract_features(train_X, column_id=id, column_sort=time,
-#                            default_fc_parameters=extraction_settings, impute_function=impute)
-# test_X = extract_features(test_X, column_id=id, column_sort=time,
-#                            default_fc_parameters=extraction_settings, impute_function=impute)
-
-#   特征筛选
-# print(len(train_X.columns.values.tolist()))
-# print(len(test_X.columns.values.tolist()))
-# train_y.set_index(id, inplace=True)
-# train_X = select_features(train_X, train_y[label])
-# test_X = test_X[train_X.columns.values.tolist()]
-# print(train_X.columns)
-# print(test_X.columns)
-# print(len(train_X.columns.values.tolist()))
-# print(len(test_X.columns.values.tolist()))
 
 #   数据输出
 train_X.to_csv(train_X_dst_path, index=None)

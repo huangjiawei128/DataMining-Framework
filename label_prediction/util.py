@@ -1,12 +1,14 @@
 import numpy as np
 from sklearn import metrics
 
-test_set_src_path = "./data_preprocessing/output/test.csv"
-test_X_src_path = "./feature_engineering/output/test_X.csv"
+test_X_src_path = "./feature_selection/output/test_X.csv"
+test_X_cp_src_path = "./feature_selection/output/test_X_cp.csv"
+test_y_src_path = "./data_preprocessing/output/test_y.csv"
 classifier_src_dir = "./model_building/output"
 
 predict_y_dst_dir = "./label_prediction/output"
 evaluation_result_dst_dir = "./label_prediction/evaluation"
+roc_curve_dst_dir = "./label_prediction/roc_curve"
 
 random_forest_params_lst = [
     {
@@ -137,19 +139,19 @@ xgboost_params_lst = [
     }
 ]
 
-svm_params_lst = [
-    {
-        'C': 1,
-        'gamma': 1,
-        'kernel': 'rbf'
-    }
-]
-
-classifier_params_lst_map = {
-    'random_forest': random_forest_params_lst,
-    'k_neighbors': k_neighbors_params_lst,
-    'xgboost': xgboost_params_lst,
-    'svm': svm_params_lst
+classifier_map = {
+    'random_forest': {
+        'need_cp_samples': True,
+        'params_lst': random_forest_params_lst
+    },
+    'k_neighbors': {
+        'need_cp_samples': True,
+        'params_lst': k_neighbors_params_lst
+    },
+    'xgboost': {
+        'need_cp_samples': True,
+        'params_lst': xgboost_params_lst
+    },
 }
 
 
@@ -160,6 +162,7 @@ def cal_metric(test_y, predict_y, pro_predict_y=None):
     ret['confusion_matrix'] = [[int(TN), int(FP)], [int(FN), int(TP)]]
     if pro_predict_y is not None:
         FPR, TPR, thresholds = metrics.roc_curve(test_y, pro_predict_y[:, 1], pos_label=1)
+        ret['FPR'], ret['TPR'] = FPR, TPR
         ret['auc'] = metrics.auc(FPR, TPR)
     ret['precision'] = metrics.precision_score(y_true=test_y, y_pred=predict_y)
     ret['recall'] = metrics.recall_score(y_true=test_y, y_pred=predict_y)

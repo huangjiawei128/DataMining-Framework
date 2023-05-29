@@ -5,6 +5,8 @@ import pandas as pd
 import numpy as np
 import pickle
 import argparse
+from collections import Counter
+from imblearn.over_sampling import SMOTE
 from util import *
 import warnings
 import os
@@ -25,12 +27,24 @@ def model_building_parser():
 #   参数处理
 args = model_building_parser().parse_args()
 classifier_name = args.classifier
+classifier_info = classifier_map[classifier_name]
 
 #   数据读取
-train_X, train_y = pd.read_csv(train_X_src_path), pd.read_csv(train_y_src_path)
-train_X, train_y = train_X.to_numpy(), train_y.to_numpy()
+need_cp_samples = classifier_info['need_cp_samples']
+if need_cp_samples:
+    train_X, train_y = pd.read_csv(train_X_cp_src_path), pd.read_csv(train_y_src_path)[label]
+    train_X.drop(id, axis=1, inplace=True)
+    #   SMOTE过采样
+    print('train set\'s labels distribution before resampling: %s' % Counter(train_y))
+    sm = SMOTE(random_state=0)
+    train_X, train_y = sm.fit_resample(train_X, train_y)
+    print('train set\'s labels distribution after resampling: %s' % Counter(train_y))
+    train_X, train_y = train_X.to_numpy(), train_y.to_numpy()
+else:
+    train_X, train_y = pd.read_csv(train_X_src_path), pd.read_csv(train_y_src_path)
+    #   TODO
 
-classifier_func, classifier_params_lst = classifier_map[classifier_name]
+classifier_func, classifier_params_lst = classifier_info['func'], classifier_info['params_lst']
 for classifier_params in classifier_params_lst:
     # 分类器训练
     print("---------- classifier training starts ----------")
