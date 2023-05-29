@@ -33,9 +33,9 @@ need_cp_samples = classifier_info['need_cp_samples']
 if need_cp_samples:
     test_X, test_y = pd.read_csv(test_X_cp_src_path), pd.read_csv(test_y_src_path)[label]
     test_X.drop(id, axis=1, inplace=True)
-    test_X, train_y = test_X.to_numpy(), test_y.to_numpy()
+    test_X, test_y = test_X.to_numpy(), test_y.to_numpy()
 else:
-    train_X, train_y = pd.read_csv(test_X_src_path), pd.read_csv(test_y_src_path)
+    test_X, test_y = pd.read_csv(test_X_src_path), pd.read_csv(test_y_src_path)
     #   TODO
 
 classifier_params_lst = classifier_info['params_lst']
