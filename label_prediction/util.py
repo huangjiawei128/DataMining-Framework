@@ -2,7 +2,7 @@ import numpy as np
 from sklearn import metrics
 
 test_set_src_path = "./data_preprocessing/output/test.csv"
-test_X_src_path = "./feature_selection/output/test_X.csv"
+test_X_src_path = "./feature_engineering/output/test_X.csv"
 classifier_src_dir = "./model_building/output"
 
 predict_y_dst_dir = "./label_prediction/output"
