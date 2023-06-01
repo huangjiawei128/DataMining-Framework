@@ -1,13 +1,14 @@
 #coding=utf-8
 #coding=gbk
 
+import numpy as np
 import pandas as pd
 from util import *
 import warnings
 import os
 import sys
 from tqdm import tqdm
-from sklearn.preprocessing import OneHotEncoder
+from scipy.interpolate import UnivariateSpline
 from sklearn.preprocessing import StandardScaler
 cwd = os.path.dirname(__file__)
 sys.path.append(os.path.dirname(cwd))
@@ -15,75 +16,71 @@ from global_setting.util import *
 
 warnings.filterwarnings("ignore")
 
-
-def ICD9_to_OH_cols(row):
-    values = [int(value) for value in eval(row['ICD9'])]
-    value_to_count = {}
-    for value in values:
-        if value in value_to_count.keys():
-            value_to_count[value] += 1
-        else:
-            value_to_count[value] = 1
-    for value, count in value_to_count.items():
-        col = 'ICD9_' + str(value)
-        row[col] = count
-    return row
+feature_medians = {}
 
 
-#   数据读取
-train_set, test_set = pd.read_csv(ori_train_set_src_path), pd.read_csv(ori_test_set_src_path)
+def insert_missing_moments(df):
+    time_min = df[time].min()
+    df.set_index(time, inplace=True)
+    id_value = df[id].mode().values[0]
+    resampled_df = df.resample('H').asfreq()
+    resampled_df[id].fillna(id_value, inplace=True)
+    df = pd.concat([df, resampled_df])
+    df.sort_index(inplace=True)
+    df = df.reset_index().drop_duplicates(subset=[time], keep='last')
+    df = df[df.apply(lambda row: row.time >= time_min, axis=1).cumsum().ge(1)]
+    df[time] = (df[time] - time_min.floor('H')).dt.total_seconds() // 60
+    return df
+
+
+def fill_missing_values(df):
+    for feature in features:
+        X, Y = df[time], df[feature]
+        value_mask = Y.notna()
+        missing_mask = ~value_mask
+        X_value, Y_value = X[value_mask].to_numpy(), Y[value_mask].to_numpy()
+        valid_moments_num = len(X_value)
+        invalid_moments_num = len(X) - valid_moments_num
+        if valid_moments_num >= 2:
+            X_missing = X[missing_mask].to_numpy()
+            interp_func = UnivariateSpline(X_value, Y_value, k=min(3, valid_moments_num-1), ext=3)
+            Y_missing = interp_func(X_missing)
+        elif valid_moments_num == 1:
+            Y_missing = np.full(shape=invalid_moments_num, fill_value=Y_value[0], dtype=np.float64)
+        elif valid_moments_num == 0:
+            Y_missing = np.full(shape=invalid_moments_num, fill_value=feature_medians[feature], dtype=np.float64)
+        df[feature][missing_mask] = Y_missing
+    return df
+
+
+#   数据读取 & 标签构建
+train_set, test_set = pd.read_csv(ori_train_set_src_path, dtype={id: str}), \
+    pd.read_csv(ori_test_set_src_path, dtype={id: str})
+train_y, test_y = train_set[[id, label]], test_set[[id, label]]
+train_y.drop_duplicates(subset=[id], keep='last', inplace=True)
+test_y.drop_duplicates(subset=[id], keep='last', inplace=True)
+train_set.drop(columns=label, axis=1, inplace=True)
+test_set.drop(columns=label, axis=1, inplace=True)
+train_X, test_X = train_set, test_set
 
 #   数据清洗
-train_set.dropna(subset=num_features, how='all', inplace=True)
-train_set.set_index(pd.Index(range(train_set.shape[0])), inplace=True)
+feature_medians = [train_X[feature].median() for feature in features]
 
-for feature in binary_cate_features:
-    train_set[feature].fillna(0.0, inplace=True)
-    test_set[feature].fillna(0.0, inplace=True)
-
-for feature in multiple_cate_features:
-    train_set[feature].fillna("NULL", inplace=True)
-    test_set[feature].fillna("NULL", inplace=True)
-
-for feature in list_features:
-    train_set[feature].fillna("[]", inplace=True)
-    test_set[feature].fillna("[]", inplace=True)
-
-for feature in num_features:
-    median_val = train_set[feature].median()
-    train_set[feature].fillna(median_val, inplace=True)
-    test_set[feature].fillna(median_val, inplace=True)
-
-#   初始特征处理
-OH_encoder = OneHotEncoder(handle_unknown='ignore', sparse=False)
-OH_cols_train_set = pd.DataFrame(OH_encoder.fit_transform(train_set[multiple_cate_features]))
-OH_cols_train_set.columns = OH_encoder.get_feature_names(multiple_cate_features)
-OH_cols_test_set = pd.DataFrame(OH_encoder.transform(test_set[multiple_cate_features]))
-OH_cols_test_set.columns = OH_encoder.get_feature_names(multiple_cate_features)
-train_set.drop(multiple_cate_features, axis=1, inplace=True)
-test_set.drop(multiple_cate_features, axis=1, inplace=True)
-train_set = pd.concat([train_set, OH_cols_train_set], axis=1)
-test_set = pd.concat([test_set, OH_cols_test_set], axis=1)
-
-ICD9_OH_cols = ['ICD9_' + str(i) for i in range(1, 1000)]
-train_set = train_set.reindex(columns=train_set.columns.union(ICD9_OH_cols), fill_value=0)
-test_set = test_set.reindex(columns=test_set.columns.union(ICD9_OH_cols), fill_value=0)
+train_X[time] = pd.to_datetime(train_X[time])
+test_X[time] = pd.to_datetime(test_X[time])
 tqdm.pandas(desc='apply')
-train_set = train_set.progress_apply(ICD9_to_OH_cols, axis=1)
-test_set = test_set.progress_apply(ICD9_to_OH_cols, axis=1)
-train_set.drop('ICD9', axis=1, inplace=True)
-test_set.drop('ICD9', axis=1, inplace=True)
-
-drop_cols = [col for col in set(train_set.columns).difference({label}) if train_set[col].nunique() == 1]
-train_set.drop(columns=drop_cols, axis=1, inplace=True)
-test_set.drop(columns=drop_cols, axis=1, inplace=True)
-
-#   数据标准化
-scaler = StandardScaler()
-features_to_normalize = list(set(num_features + ICD9_OH_cols).intersection(train_set.columns))
-train_set[features_to_normalize] = scaler.fit_transform(train_set[features_to_normalize])
-test_set[features_to_normalize] = scaler.transform(test_set[features_to_normalize])
+print("----------insert missing moments----------")
+train_X = train_X.groupby(id, as_index=False).progress_apply(insert_missing_moments)
+test_X = test_X.groupby(id, as_index=False).progress_apply(insert_missing_moments)
+print("----------filter valueless samples----------")
+train_X = train_X.groupby(id, as_index=False).filter(lambda g: g[features].count().min() >= 2)
+train_y = train_y[train_y[id].isin(train_X[id])]
+print("----------fill missing values----------")
+train_X = train_X.groupby(id, as_index=False).progress_apply(fill_missing_values)
+test_X = test_X.groupby(id, as_index=False).progress_apply(fill_missing_values)
 
 #   数据输出
-train_set.to_csv(train_set_dst_path, index=None)
-test_set.to_csv(test_set_dst_path, index=None)
+train_X.to_csv(train_X_dst_path, index=None)
+test_X.to_csv(test_X_dst_path, index=None)
+train_y.to_csv(train_y_dst_path, index=None)
+test_y.to_csv(test_y_dst_path, index=None)
