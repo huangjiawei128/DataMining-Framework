@@ -13,4 +13,3 @@ expand_feature_types = {
     'mean_abs_change': None, 'mean_change': None, 'root_mean_square': None,
     'skewness': None, 'sample_entropy': None, 'mean_second_derivative_central': None
 }
-
