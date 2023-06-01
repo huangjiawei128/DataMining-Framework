@@ -1,4 +1,6 @@
-**/output/*
-**/evaluation/*
 **/__pycache__/
 .idea
+**/output/
+**/evaluation/
+**/roc_curve/
+
